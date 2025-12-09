@@ -313,55 +313,25 @@ def main():
         # ===== 手机适配：每天一个大卡片 =====
         # 就像给宝宝换尿布要铺开整张一样，让每天的菜单占满整个屏幕宽度
         for menu_day in weekly_menu:
-            # 使用大卡片展示每天的菜单（不再使用 st.columns(3)）
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                        padding: 1.5rem; 
-                        border-radius: 15px; 
-                        margin: 1rem 0; 
-                        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-                        color: white;">
-                <!-- 日期标题 -->
-                <div style="font-size: 1.8rem; 
-                            font-weight: bold; 
-                            margin-bottom: 1rem; 
-                            text-align: center;
-                            color: #FFD93D;
-                            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);">
-                    📆 {menu_day['day']}
-                </div>
-                
-                <!-- 大荤卡片 -->
-                <div style="background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%); 
-                            padding: 1.2rem; 
-                            border-radius: 10px; 
-                            margin: 0.8rem 0;
-                            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            # 构建HTML卡片（不使用HTML注释，避免渲染问题）
+            card_html = f'''
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem; border-radius: 15px; margin: 1rem 0; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); color: white;">
+                <div style="font-size: 1.8rem; font-weight: bold; margin-bottom: 1rem; text-align: center; color: #FFD93D; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);">📆 {menu_day['day']}</div>
+                <div style="background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%); padding: 1.2rem; border-radius: 10px; margin: 0.8rem 0; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
                     <div style="font-size: 1rem; opacity: 0.9; margin-bottom: 0.3rem;">🥩 大荤</div>
                     <div style="font-size: 1.4rem; font-weight: bold;">{menu_day['main_meat']}</div>
                 </div>
-                
-                <!-- 中荤卡片 -->
-                <div style="background: linear-gradient(135deg, #4ECDC4 0%, #6EDDD6 100%); 
-                            padding: 1.2rem; 
-                            border-radius: 10px; 
-                            margin: 0.8rem 0;
-                            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+                <div style="background: linear-gradient(135deg, #4ECDC4 0%, #6EDDD6 100%); padding: 1.2rem; border-radius: 10px; margin: 0.8rem 0; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
                     <div style="font-size: 1rem; opacity: 0.9; margin-bottom: 0.3rem;">🥚 中荤</div>
                     <div style="font-size: 1.4rem; font-weight: bold;">{menu_day['semi_meat']}</div>
                 </div>
-                
-                <!-- 素菜卡片 -->
-                <div style="background: linear-gradient(135deg, #95E1D3 0%, #B5F0E8 100%); 
-                            padding: 1.2rem; 
-                            border-radius: 10px; 
-                            margin: 0.8rem 0;
-                            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+                <div style="background: linear-gradient(135deg, #95E1D3 0%, #B5F0E8 100%); padding: 1.2rem; border-radius: 10px; margin: 0.8rem 0; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
                     <div style="font-size: 1rem; opacity: 0.9; margin-bottom: 0.3rem;">🥬 素菜</div>
                     <div style="font-size: 1.4rem; font-weight: bold;">{menu_day['veggie']}</div>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            '''
+            st.markdown(card_html, unsafe_allow_html=True)
         
         # 底部提示
         st.markdown("---")
