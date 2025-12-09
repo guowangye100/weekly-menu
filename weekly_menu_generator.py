@@ -1,11 +1,18 @@
 """
 每周菜谱生成器
 使用 Streamlit 创建的网页应用，用于生成周一到周五的健康菜谱
+优化版本：
+1. 数据分离：菜品数据存储在 dishes.json 中
+2. 算法优化：避免连续两天吃同一道菜
+3. 容错处理：过滤条件太严格时友好提示
+4. 手机适配：每天一个大卡片布局
 """
 
 import streamlit as st
 import random
 from datetime import datetime
+import json
+import os
 
 # 页面配置 - 手机优先设计
 st.set_page_config(
@@ -86,64 +93,33 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ==================== 菜单数据定义 ====================
+# ==================== 数据加载函数 ====================
 
-# 大荤类（main_meat）- 北方口味，高蛋白，偏咸鲜
-MAIN_MEAT_DISHES = [
-    {"name": "葱爆羊肉", "has_lamb": True, "has_spicy": False},
-    {"name": "红烧排骨", "has_lamb": False, "has_spicy": False},
-    {"name": "酱牛肉", "has_lamb": False, "has_spicy": False},
-    {"name": "宫保鸡丁", "has_lamb": False, "has_spicy": True},
-    {"name": "溜肉段", "has_lamb": False, "has_spicy": False},
-    {"name": "糖醋里脊", "has_lamb": False, "has_spicy": False},
-    {"name": "红烧肉", "has_lamb": False, "has_spicy": False},
-    {"name": "鱼香肉丝", "has_lamb": False, "has_spicy": True},
-    {"name": "回锅肉", "has_lamb": False, "has_spicy": True},
-    {"name": "京酱肉丝", "has_lamb": False, "has_spicy": False},
-    {"name": "红烧带鱼", "has_lamb": False, "has_spicy": False},
-    {"name": "糖醋鱼", "has_lamb": False, "has_spicy": False},
-    {"name": "红烧鸡块", "has_lamb": False, "has_spicy": False},
-    {"name": "水煮肉片", "has_lamb": False, "has_spicy": True},
-    {"name": "干煸豆角", "has_lamb": False, "has_spicy": True},
-]
-
-# 中荤类（semi_meat）- 蛋奶类，高蛋白
-SEMI_MEAT_DISHES = [
-    {"name": "西红柿炒蛋", "has_lamb": False, "has_spicy": False},
-    {"name": "木须肉", "has_lamb": False, "has_spicy": False},
-    {"name": "肉末茄子", "has_lamb": False, "has_spicy": False},
-    {"name": "麻婆豆腐", "has_lamb": False, "has_spicy": True},
-    {"name": "青椒肉丝", "has_lamb": False, "has_spicy": True},
-    {"name": "鱼香茄子", "has_lamb": False, "has_spicy": True},
-    {"name": "韭菜炒蛋", "has_lamb": False, "has_spicy": False},
-    {"name": "蒜苔炒肉", "has_lamb": False, "has_spicy": False},
-    {"name": "豆角炒肉", "has_lamb": False, "has_spicy": False},
-    {"name": "尖椒炒蛋", "has_lamb": False, "has_spicy": True},
-    {"name": "土豆丝炒肉", "has_lamb": False, "has_spicy": False},
-    {"name": "芹菜炒肉", "has_lamb": False, "has_spicy": False},
-    {"name": "洋葱炒蛋", "has_lamb": False, "has_spicy": False},
-    {"name": "干煸四季豆", "has_lamb": False, "has_spicy": True},
-    {"name": "蚂蚁上树", "has_lamb": False, "has_spicy": True},
-]
-
-# 素菜类（veggie）- 健康清淡
-VEGGIE_DISHES = [
-    {"name": "地三鲜（少油）", "has_lamb": False, "has_spicy": False},
-    {"name": "凉拌土豆丝", "has_lamb": False, "has_spicy": False},
-    {"name": "蒜蓉西兰花", "has_lamb": False, "has_spicy": False},
-    {"name": "醋溜白菜", "has_lamb": False, "has_spicy": False},
-    {"name": "清炒小白菜", "has_lamb": False, "has_spicy": False},
-    {"name": "蒜蓉菠菜", "has_lamb": False, "has_spicy": False},
-    {"name": "清炒豆芽", "has_lamb": False, "has_spicy": False},
-    {"name": "凉拌黄瓜", "has_lamb": False, "has_spicy": False},
-    {"name": "清炒时蔬", "has_lamb": False, "has_spicy": False},
-    {"name": "蒜蓉生菜", "has_lamb": False, "has_spicy": False},
-    {"name": "清炒豆角", "has_lamb": False, "has_spicy": False},
-    {"name": "凉拌豆腐丝", "has_lamb": False, "has_spicy": False},
-    {"name": "清炒冬瓜", "has_lamb": False, "has_spicy": False},
-    {"name": "蒜蓉空心菜", "has_lamb": False, "has_spicy": False},
-    {"name": "凉拌海带丝", "has_lamb": False, "has_spicy": False},
-]
+def load_dishes():
+    """
+    从 dishes.json 文件加载菜品数据
+    就像保险公司从"条款库"读取保单条款一样
+    
+    返回:
+        包含三个类别菜品的字典: {"main_meat": [...], "semi_meat": [...], "veggie": [...]}
+    """
+    # 获取当前文件所在目录
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    json_path = os.path.join(current_dir, "dishes.json")
+    
+    try:
+        # 尝试读取 JSON 文件（就像打开保险条款库）
+        with open(json_path, 'r', encoding='utf-8') as f:
+            dishes = json.load(f)
+        return dishes
+    except FileNotFoundError:
+        # 如果文件不存在，显示错误提示（就像保单找不到一样要告诉客户）
+        st.error("❌ 找不到菜品数据文件 dishes.json，请确保文件在程序目录下！")
+        return {"main_meat": [], "semi_meat": [], "veggie": []}
+    except json.JSONDecodeError:
+        # 如果 JSON 格式错误，显示错误提示
+        st.error("❌ 菜品数据文件格式错误，请检查 dishes.json 文件！")
+        return {"main_meat": [], "semi_meat": [], "veggie": []}
 
 # ==================== 核心功能函数 ====================
 
@@ -174,6 +150,9 @@ def filter_dishes(dishes, no_lamb=False, no_spicy=False):
 def generate_weekly_menu(no_lamb=False, no_spicy=False):
     """
     生成一周的菜单（周一到周五）
+    优化版：避免连续两天吃同一道菜，添加容错处理
+    
+    就像核保时要检查"连续出险记录"一样，我们要确保不会连续两天吃一样的菜
     
     参数:
         no_lamb: 是否不吃羊肉
@@ -181,51 +160,75 @@ def generate_weekly_menu(no_lamb=False, no_spicy=False):
     
     返回:
         包含5天菜单的列表，每天包含 main_meat, semi_meat, veggie 三个菜品
+        如果过滤条件太严格导致无菜可选，返回 None
     """
+    # 从 JSON 文件加载菜品数据
+    dishes = load_dishes()
+    
     # 过滤菜品
-    main_meat_filtered = filter_dishes(MAIN_MEAT_DISHES, no_lamb, no_spicy)
-    semi_meat_filtered = filter_dishes(SEMI_MEAT_DISHES, no_lamb, no_spicy)
-    veggie_filtered = filter_dishes(VEGGIE_DISHES, no_lamb, no_spicy)
+    main_meat_filtered = filter_dishes(dishes["main_meat"], no_lamb, no_spicy)
+    semi_meat_filtered = filter_dishes(dishes["semi_meat"], no_lamb, no_spicy)
+    veggie_filtered = filter_dishes(dishes["veggie"], no_lamb, no_spicy)
     
-    # 检查是否有足够的菜品
-    if len(main_meat_filtered) < 5:
-        st.warning("⚠️ 大荤类菜品不足，可能无法生成完整菜单")
-    if len(semi_meat_filtered) < 5:
-        st.warning("⚠️ 中荤类菜品不足，可能无法生成完整菜单")
-    if len(veggie_filtered) < 5:
-        st.warning("⚠️ 素菜类菜品不足，可能无法生成完整菜单")
+    # ===== 容错处理：检查是否有足够的菜品 =====
+    # 就像核保时检查"可承保额度"一样，确保有足够的菜品可选
+    if len(main_meat_filtered) == 0 or len(semi_meat_filtered) == 0 or len(veggie_filtered) == 0:
+        # 如果某个类别完全没有菜品，返回 None（让调用者显示友好提示）
+        return None
     
-    # 用于跟踪已使用的菜品，确保不重复
+    # 用于跟踪已使用的菜品，确保不重复（就像理赔记录一样）
     used_dishes = set()
+    
+    # 用于记录"昨天"的菜品，避免连续两天吃一样的
+    # 就像保险公司会记录"上一次理赔时间"一样
+    yesterday_dishes = {"main_meat": None, "semi_meat": None, "veggie": None}
     
     weekly_menu = []
     days = ["周一", "周二", "周三", "周四", "周五"]
     
     for day in days:
-        # 从每个类别中随机选择菜品，确保不重复
+        # ===== 第一步：找出"可用的菜品"（排除已使用的） =====
         main_meat_available = [d for d in main_meat_filtered if d["name"] not in used_dishes]
         semi_meat_available = [d for d in semi_meat_filtered if d["name"] not in used_dishes]
         veggie_available = [d for d in veggie_filtered if d["name"] not in used_dishes]
         
-        # 如果某个类别没有未使用的菜品，则从全部菜品中随机选择（允许重复）
+        # ===== 第二步：如果某个类别没有未使用的菜品了，需要重置 =====
+        # 就像"赔付额度用完了，需要续保"一样
         if not main_meat_available:
-            main_meat_available = main_meat_filtered
-        if not semi_meat_available:
-            semi_meat_available = semi_meat_filtered
-        if not veggie_available:
-            veggie_available = veggie_filtered
+            used_dishes -= {d["name"] for d in main_meat_filtered}  # 清空这个类别的"已使用"记录
+            main_meat_available = main_meat_filtered.copy()
+            # ===== 关键优化：避免"今天的菜"等于"昨天的菜" =====
+            if yesterday_dishes["main_meat"] and len(main_meat_available) > 1:
+                # 如果昨天吃过某道菜，今天就不选它（除非只剩这一道菜了）
+                main_meat_available = [d for d in main_meat_available if d["name"] != yesterday_dishes["main_meat"]]
         
-        # 随机选择菜品
+        if not semi_meat_available:
+            used_dishes -= {d["name"] for d in semi_meat_filtered}
+            semi_meat_available = semi_meat_filtered.copy()
+            if yesterday_dishes["semi_meat"] and len(semi_meat_available) > 1:
+                semi_meat_available = [d for d in semi_meat_available if d["name"] != yesterday_dishes["semi_meat"]]
+        
+        if not veggie_available:
+            used_dishes -= {d["name"] for d in veggie_filtered}
+            veggie_available = veggie_filtered.copy()
+            if yesterday_dishes["veggie"] and len(veggie_available) > 1:
+                veggie_available = [d for d in veggie_available if d["name"] != yesterday_dishes["veggie"]]
+        
+        # ===== 第三步：从可用菜品中随机选择 =====
         main_meat = random.choice(main_meat_available)
         semi_meat = random.choice(semi_meat_available)
         veggie = random.choice(veggie_available)
         
-        # 记录已使用的菜品
+        # ===== 第四步：记录已使用的菜品和"昨天"的菜品 =====
         used_dishes.add(main_meat["name"])
         used_dishes.add(semi_meat["name"])
         used_dishes.add(veggie["name"])
         
-        # 添加到周菜单
+        yesterday_dishes["main_meat"] = main_meat["name"]
+        yesterday_dishes["semi_meat"] = semi_meat["name"]
+        yesterday_dishes["veggie"] = veggie["name"]
+        
+        # ===== 第五步：添加到周菜单 =====
         weekly_menu.append({
             "day": day,
             "main_meat": main_meat["name"],
@@ -280,9 +283,25 @@ def main():
             # 生成菜单
             weekly_menu = generate_weekly_menu(no_lamb=no_lamb, no_spicy=no_spicy)
             
-            # 保存到session state，以便刷新后仍能看到
-            st.session_state['weekly_menu'] = weekly_menu
-            st.session_state['menu_generated'] = True
+            # ===== 容错处理：如果过滤条件太严格导致无菜可选 =====
+            # 就像核保时"风险太高无法承保"，但我们要友好地告诉客户原因
+            if weekly_menu is None:
+                st.session_state['menu_generated'] = False
+                st.session_state['error_message'] = True
+                st.error("😅 亲爱的，您的筛选条件有点严格哦！")
+                st.warning("""
+                ### 💡 建议：
+                - 如果您勾选了"不吃羊肉"和"不吃辣"，可能会导致某些菜品类别没有菜可选
+                - 请尝试放宽一些条件，比如取消"不吃辣"的勾选
+                - 或者我们可以考虑增加更多菜品到菜单库中
+                
+                **就像保险一样，筛选条件太多可能会"无法承保"哦~ 😊**
+                """)
+            else:
+                # 保存到session state，以便刷新后仍能看到
+                st.session_state['weekly_menu'] = weekly_menu
+                st.session_state['menu_generated'] = True
+                st.session_state['error_message'] = False
     
     # 显示生成的菜单
     if st.session_state.get('menu_generated', False):
@@ -291,44 +310,58 @@ def main():
         
         weekly_menu = st.session_state.get('weekly_menu', [])
         
-        # 为每一天创建卡片展示
+        # ===== 手机适配：每天一个大卡片 =====
+        # 就像给宝宝换尿布要铺开整张一样，让每天的菜单占满整个屏幕宽度
         for menu_day in weekly_menu:
-            # 使用容器创建卡片效果
-            with st.container():
-                # 日期标题
-                st.markdown(f"### {menu_day['day']} 📆")
+            # 使用大卡片展示每天的菜单（不再使用 st.columns(3)）
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        padding: 1.5rem; 
+                        border-radius: 15px; 
+                        margin: 1rem 0; 
+                        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+                        color: white;">
+                <!-- 日期标题 -->
+                <div style="font-size: 1.8rem; 
+                            font-weight: bold; 
+                            margin-bottom: 1rem; 
+                            text-align: center;
+                            color: #FFD93D;
+                            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);">
+                    📆 {menu_day['day']}
+                </div>
                 
-                # 使用列布局展示菜品
-                col1, col2, col3 = st.columns(3)
+                <!-- 大荤卡片 -->
+                <div style="background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%); 
+                            padding: 1.2rem; 
+                            border-radius: 10px; 
+                            margin: 0.8rem 0;
+                            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+                    <div style="font-size: 1rem; opacity: 0.9; margin-bottom: 0.3rem;">🥩 大荤</div>
+                    <div style="font-size: 1.4rem; font-weight: bold;">{menu_day['main_meat']}</div>
+                </div>
                 
-                with col1:
-                    st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%); 
-                                padding: 1rem; border-radius: 10px; text-align: center; 
-                                color: white; font-weight: bold; font-size: 1.1rem;">
-                        🥩 大荤<br>{menu_day['main_meat']}
-                    </div>
-                    """, unsafe_allow_html=True)
+                <!-- 中荤卡片 -->
+                <div style="background: linear-gradient(135deg, #4ECDC4 0%, #6EDDD6 100%); 
+                            padding: 1.2rem; 
+                            border-radius: 10px; 
+                            margin: 0.8rem 0;
+                            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+                    <div style="font-size: 1rem; opacity: 0.9; margin-bottom: 0.3rem;">🥚 中荤</div>
+                    <div style="font-size: 1.4rem; font-weight: bold;">{menu_day['semi_meat']}</div>
+                </div>
                 
-                with col2:
-                    st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, #4ECDC4 0%, #6EDDD6 100%); 
-                                padding: 1rem; border-radius: 10px; text-align: center; 
-                                color: white; font-weight: bold; font-size: 1.1rem;">
-                        🥚 中荤<br>{menu_day['semi_meat']}
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col3:
-                    st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, #95E1D3 0%, #B5F0E8 100%); 
-                                padding: 1rem; border-radius: 10px; text-align: center; 
-                                color: white; font-weight: bold; font-size: 1.1rem;">
-                        🥬 素菜<br>{menu_day['veggie']}
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                st.markdown("<br>", unsafe_allow_html=True)
+                <!-- 素菜卡片 -->
+                <div style="background: linear-gradient(135deg, #95E1D3 0%, #B5F0E8 100%); 
+                            padding: 1.2rem; 
+                            border-radius: 10px; 
+                            margin: 0.8rem 0;
+                            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+                    <div style="font-size: 1rem; opacity: 0.9; margin-bottom: 0.3rem;">🥬 素菜</div>
+                    <div style="font-size: 1.4rem; font-weight: bold;">{menu_day['veggie']}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
         
         # 底部提示
         st.markdown("---")
@@ -345,3 +378,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
